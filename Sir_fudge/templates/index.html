@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bisaya Tongue | {{ 'Admin Panel' if role == 'admin' else 'Learning Lab' }}</title>
+
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#020617">
+    <link rel="icon" type="image/png" href="/static/icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap');
+        body { background: #020617; color: white; font-family: 'Syne', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.45); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.05); }
+        .mic-active { animation: pulse 1.5s infinite; background: #ef4444 !important; transform: scale(1.1); }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 30px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <nav class="w-72 glass border-r border-slate-800/50 p-8 flex flex-col">
+        <div class="flex items-center gap-3 mb-12">
+            <div class="p-2 bg-cyan-500 rounded-lg shadow-[0_0_25px_rgba(6,182,212,0.4)]"><i class="fas fa-bullhorn text-xl text-black"></i></div>
+            <h2 class="font-black tracking-tighter text-xl uppercase">Bisaya Tongue</h2>
+        </div>
+
+        <div class="space-y-3 flex-1">
+            {% if role != 'admin' %}
+            <button onclick="switchTab('trainer')" id="nav-trainer" class="w-full text-left p-4 rounded-2xl hover:bg-slate-800/50 transition-all flex items-center gap-4 font-bold text-cyan-500 bg-slate-800/40">
+                <i class="fas fa-microphone"></i> Practice Lab
+            </button>
+            {% endif %}
+
+            <button onclick="switchTab('stats')" id="nav-stats" class="w-full text-left p-4 rounded-2xl hover:bg-slate-800/50 transition-all flex items-center gap-4 font-bold {{ 'text-cyan-500 bg-slate-800/40' if role == 'admin' else 'text-slate-400' }}">
+                <i class="fas fa-chart-pie"></i> {{ 'Monitor Students' if role == 'admin' else 'My Progress' }}
+            </button>
+        </div>
+
+        <div class="pt-6 border-t border-slate-800/50">
+            <p class="text-[10px] text-slate-500 uppercase font-black mb-2 tracking-[0.2em]">{{ role }} Account</p>
+            <div class="flex items-center justify-between">
+                <span class="font-bold text-white text-sm tracking-tight">{{ user }}</span>
+                <a href="/logout" class="text-xs text-rose-500 font-bold hover:underline transition-all">Log out</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1 p-12 overflow-y-auto">
+        {% if role != 'admin' %}
+        <section id="trainer-view" class="max-w-4xl mx-auto text-center space-y-16 py-6">
+            <div>
+                <h4 id="lvl-name" class="text-cyan-500 font-black uppercase tracking-[0.4em] text-[10px] mb-6">Loading...</h4>
+                <h1 id="target" class="text-[12rem] font-black leading-none mb-4 tracking-tighter drop-shadow-2xl">-</h1>
+                <p id="hint" class="text-slate-500 text-xl italic font-medium opacity-60">Please wait...</p>
+            </div>
+
+            <div class="glass p-20 rounded-[4rem] relative max-w-xl mx-auto border-t border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
+                <div id="feedback" class="h-10 flex items-center justify-center text-2xl font-black mb-8 text-cyan-400 tracking-widest"></div>
+                <button id="mic" class="w-44 h-44 bg-cyan-600 rounded-full text-5xl shadow-2xl transition-all hover:bg-cyan-500 flex items-center justify-center mx-auto border-8 border-slate-900/50">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <p id="instruction-text" class="mt-12 text-[10px] text-slate-500 uppercase font-black tracking-widest animate-pulse">Hold to Record</p>
+            </div>
+        </section>
+        {% endif %}
+
+        <section id="stats-view" class="{{ 'block' if role == 'admin' else 'hidden' }} max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 class="text-5xl font-black mb-3 tracking-tighter">{{ 'Student Analytics' if role == 'admin' else 'My History' }}</h2>
+            <p class="text-slate-500 mb-12 text-lg">{{ 'Track real-time student accuracy, levels, and performance scores.' if role == 'admin' else 'Review your previous attempts and pronunciation metrics.' }}</p>
+
+            {% if role == 'admin' %}
+            <div id="admin-summary" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16"></div>
+            {% endif %}
+
+            <div class="glass rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-800/70 border-b border-slate-700/50">
+                        <tr class="text-[11px] uppercase text-slate-400 tracking-[0.2em] font-black">
+                            {% if role == 'admin' %}<th class="p-8">Student</th>{% endif %}
+                            <th class="p-8">Target Word</th>
+                            <th class="p-8">Level</th>
+                            <th class="p-8">Accuracy Bar</th>
+                            <th class="p-8 text-right">Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stat-table" class="divide-y divide-slate-800/30"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- APK CONFIGURATION ---
+        const API_BASE = window.location.origin;
+        const role = "{{ role }}";
+
+        const modules = [
+            {
+                name: "Pre-test: Assessment",
+                words: ["Halo", "Dagan", "Kaon", "Inom", "Tulog", "Balay", "Suga", "Dalan", "Langit", "Dagat"],
+                hints: ["Mix", "Run", "Eat", "Drink", "Sleep", "House", "Light", "Road", "Sky", "Sea"]
+            },
+            {
+                name: "Level 1: Vowels (Vokales)",
+                words: ["A", "E", "I", "O", "U"],
+                hints: ["Apple (Ah)", "Egg (Eh)", "Ink (Ee)", "Orange (Oh)", "Up (Oo)"]
+            },
+            {
+                name: "Level 2: Colors",
+                words: ["Pula", "Asul", "Dalag", "Berde", "Puti"],
+                hints: ["Red", "Blue", "Yellow", "Green", "White"]
+            },
+            {
+                name: "Level 3: Animals",
+                words: ["Iro", "Iring", "Manok", "Baka", "Baboy"],
+                hints: ["Dog", "Cat", "Chicken", "Cow", "Pig"]
+            },
+            {
+                name: "Post-test: Final Mastery",
+                words: ["Maayo", "Salamat", "Gwapo", "Gwapa", "Amigo"],
+                hints: ["Good", "Thank You", "Handsome", "Beautiful", "Friend"]
+            }
+        ];
+
+        let curMod = parseInt(localStorage.getItem('curMod')) || 0;
+        let curIdx = parseInt(localStorage.getItem('curIdx')) || 0;
+        let mediaRec;
+        const micBtn = document.getElementById('mic');
+
+        function updateUI() {
+            if(role === 'admin') return;
+
+            if (curMod >= modules.length) {
+                document.getElementById('lvl-name').innerText = "CONGRATULATIONS!";
+                document.getElementById('target').innerText = "HUMAN NA";
+                document.getElementById('target').style.fontSize = "8rem";
+                document.getElementById('hint').innerText = "You have completed all tests and levels.";
+                if(micBtn) micBtn.style.display = 'none';
+                document.getElementById('instruction-text').innerText = "Session Complete";
+                return;
+            }
+
+            document.getElementById('lvl-name').innerText = modules[curMod].name;
+            document.getElementById('target').innerText = modules[curMod].words[curIdx];
+            document.getElementById('hint').innerText = "English: " + modules[curMod].hints[curIdx];
+
+            localStorage.setItem('curMod', curMod);
+            localStorage.setItem('curIdx', curIdx);
+        }
+
+        async function start() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRec = new MediaRecorder(stream);
+                let chunks = [];
+                mediaRec.ondataavailable = e => chunks.push(e.data);
+                mediaRec.onstop = async () => {
+                    const blob = new Blob(chunks, { type: 'audio/wav' });
+                    const fd = new FormData();
+                    fd.append('audio', blob);
+                    fd.append('target', modules[curMod].words[curIdx]);
+                    fd.append('level', modules[curMod].name);
+
+                    document.getElementById('feedback').innerText = "ANALYZING...";
+
+                    try {
+                        const res = await fetch(`${API_BASE}/analyze`, { method: 'POST', body: fd });
+                        const data = await res.json();
+
+                        if(data.success && data.accuracy >= 70) {
+                            document.getElementById('feedback').innerText = "MAAYO!";
+                            curIdx++;
+                            if(curIdx >= modules[curMod].words.length) {
+                                curIdx = 0;
+                                curMod++;
+                            }
+                            setTimeout(() => {
+                                document.getElementById('feedback').innerText = "";
+                                updateUI();
+                            }, 1200);
+                        } else {
+                            document.getElementById('feedback').innerText = "RETRY (" + Math.round(data.accuracy || 0) + "%)";
+                            setTimeout(() => { document.getElementById('feedback').innerText = ""; }, 2000);
+                        }
+                    } catch (err) {
+                        document.getElementById('feedback').innerText = "ERROR";
+                    }
+                };
+                mediaRec.start();
+                micBtn.classList.add('mic-active');
+            } catch (err) { alert("Microphone access denied. Ensure you are using HTTPS."); }
+        }
+
+        function stop() {
+            if(mediaRec && mediaRec.state === "recording") mediaRec.stop();
+            if(micBtn) micBtn.classList.remove('mic-active');
+        }
+
+        function switchTab(t) {
+            const trainer = document.getElementById('trainer-view');
+            const stats = document.getElementById('stats-view');
+            if(trainer) trainer.classList.toggle('hidden', t !== 'trainer');
+            stats.classList.toggle('hidden', t !== 'stats');
+
+            const btnT = document.getElementById('nav-trainer');
+            const btnS = document.getElementById('nav-stats');
+            if(btnT) btnT.className = t === 'trainer' ? 'w-full text-left p-4 rounded-2xl bg-slate-800/40 flex items-center gap-4 font-bold text-cyan-500' : 'w-full text-left p-4 rounded-2xl hover:bg-slate-800/50 transition-all flex items-center gap-4 font-bold text-slate-400';
+            btnS.className = t === 'stats' ? 'w-full text-left p-4 rounded-2xl bg-slate-800/40 flex items-center gap-4 font-bold text-cyan-500' : 'w-full text-left p-4 rounded-2xl hover:bg-slate-800/50 transition-all flex items-center gap-4 font-bold text-slate-400';
+
+            if(t === 'stats') loadStats();
+        }
+
+        async function loadStats() {
+            if(role === 'admin') {
+                const sumRes = await fetch(`${API_BASE}/get_admin_summary`);
+                const sumData = await sumRes.json();
+                document.getElementById('admin-summary').innerHTML = sumData.map(s => `
+                    <div class="glass p-8 rounded-[2rem] border-l-8 border-cyan-500 shadow-2xl">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Student</p>
+                        <h3 class="text-3xl font-black mb-6 tracking-tight">${s.username}</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-slate-400">Avg Accuracy</span>
+                                <span class="text-cyan-400 font-black px-3 py-1 bg-cyan-500/10 rounded-full">${Math.round(s.avg_accuracy)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            const res = await fetch(`${API_BASE}/get_scores`);
+            const data = await res.json();
+            document.getElementById('stat-table').innerHTML = data.map(s => `
+                <tr class="hover:bg-slate-800/20 transition-all">
+                    ${role === 'admin' ? `<td class="p-8 font-black text-cyan-400 text-sm">${s.username}</td>` : ''}
+                    <td class="p-8 font-bold text-xl">${s.word}</td>
+                    <td class="p-8 text-slate-500 text-xs font-black uppercase">${s.level}</td>
+                    <td class="p-8">
+                        <div class="flex items-center gap-4">
+                            <div class="w-32 bg-slate-900 h-2.5 rounded-full overflow-hidden border border-white/5">
+                                <div class="bg-gradient-to-r from-cyan-600 to-cyan-400 h-full" style="width: ${s.accuracy}%"></div>
+                            </div>
+                            <span class="font-black text-cyan-500 text-xs">${s.accuracy}%</span>
+                        </div>
+                    </td>
+                    <td class="p-8 text-right text-slate-600 font-mono text-[10px]">${new Date(s.timestamp).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        if(micBtn) {
+            micBtn.onmousedown = start;
+            micBtn.onmouseup = stop;
+            micBtn.ontouchstart = (e) => { e.preventDefault(); start(); };
+            micBtn.ontouchend = (e) => { e.preventDefault(); stop(); };
+            window.onkeydown = e => { if(e.code === "Space") start(); };
+            window.onkeyup = e => { if(e.code === "Space") stop(); };
+        }
+
+        if(role === 'admin') { loadStats(); } else { updateUI(); }
+
+        // Register Service Worker for PWA support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js');
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<div class="glass p-8 rounded-3xl max-w-lg mx-auto text-center border border-slate-700 glow-cyan">
+    <div class="flex justify-between items-center mb-5">
+        <h2 class="text-3xl font-black text-white italic tracking-tight uppercase">SYSTEMS: ONLINE</h2>
+        <span class="bg-rose-500/10 text-rose-400 px-3 py-1 rounded-full text-xs font-bold border border-rose-500/20 mic-pulse">WARNING: Impostor Nearby</span>
+    </div>
+    
+    <div class="relative bg-[#020617] rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+        <canvas id="realisticLadderCanvas" width="450" height="500" class="mx-auto"></canvas>
+    </div>
+
+    <p class="mt-5 text-slate-400 text-sm font-medium tracking-wide">
+        Crewmate YPos: <span id="yPosDisplay" class="text-cyan-400 font-mono">0</span>m / Access Hatch: 150m
+    </p>
+</div>
+
+<script>
+// Load Detailed Textures (walking, backpack)
+const realisticTexture = new Image();
+realisticTexture.src = 'https://raw.githubusercontent.com/IgorZalutski/AmongUsSprites/master/walking/Walk1.png'; // Example walking sprite base
+
+// The Atlas contains simplified data on hand positions
+const handAtlas = new Image();
+handAtlas.src = 'https://raw.githubusercontent.com/IgorZalutski/AmongUsSprites/master/hands/HandsAtlas.png';
+
+const canvas = document.getElementById('realisticLadderCanvas');
+const ctx = canvas.getContext('2d');
+
+let yPos = 400; // Character starting position (bottom)
+let frame = 0;   // Controls the animation cycle
+let currentFeetIdx = 0; // Walk cycle index
+
+// Texture data: Slicing walk sequence from Walk1.png (simplified example)
+const walkSequence = [
+    { x: 0,   y: 0,  w: 120, h: 145 }, // Stand
+    { x: 130, y: 0,  w: 120, h: 145 }, // Right foot forward
+    { x: 0,   y: 0,  w: 120, h: 145 }, // Stand
+    { x: 260, y: 0,  w: 120, h: 145 }, // Left foot forward
+];
+
+// Hand placements for different stages of climbing
+const handSequence = [
+    { L: { x: 50, y: 15 }, R: { x: 100, y: -15 } }, // Right high
+    { L: { x: 45, y: -10 }, R: { x: 105, y: -10 } }, // Reach/Hold
+    { L: { x: 40, y: -15 }, R: { x: 110, y: 15 } },  // Left high
+];
+
+function drawEnvironment() {
+    // 1. Shaft Depth Gradient
+    const depth = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    depth.addColorStop(0, '#020617'); // Pitch dark top
+    depth.addColorStop(1, '#0f172a'); // Slightly lighter base
+    ctx.fillStyle = depth;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 2. Shaft Metal Panel Textures
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#1e293b';
+    for (let i = 0; i < canvas.width; i += 75) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height);
+        ctx.stroke();
+    }
+}
+
+function drawRealisticLadder() {
+    const rungColor = "#475569";
+    const railColor = "#64748b";
+
+    // 1. Realistic Rails (Left & Right)
+    ctx.strokeStyle = railColor;
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    
+    // Left rail
+    ctx.beginPath();
+    ctx.moveTo(150, -50);
+    ctx.lineTo(150, canvas.height + 50);
+    ctx.stroke();
+
+    // Right rail
+    ctx.beginPath();
+    ctx.moveTo(300, -50);
+    ctx.lineTo(300, canvas.height + 50);
+    ctx.stroke();
+
+    // 2. Realistic Rungs (Moving down)
+    ctx.strokeStyle = rungColor;
+    ctx.lineWidth = 7;
+    const movingOffset = (frame * 1.5) % 60; // Simulation moves down
+
+    for (let i = -100; i < canvas.height + 100; i += 60) {
+        ctx.beginPath();
+        ctx.moveTo(150, i + movingOffset);
+        ctx.lineTo(300, i + movingOffset);
+        ctx.stroke();
+    }
+}
+
+function drawDetailedHands(bodyX, bodyY, handPair) {
+    const handRadius = 10;
+    ctx.fillStyle = "#ef4444"; // Color must match body
+
+    // Left hand
+    ctx.beginPath();
+    ctx.arc(bodyX + handPair.L.x, bodyY + handPair.L.y, handRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#000'; // Define outline
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Right hand
+    ctx.beginPath();
+    ctx.arc(bodyX + handPair.R.x, bodyY + handPair.R.y, handRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.stroke();
+}
+
+function drawDetailedCrewmate(x, y) {
+    // 1. Crewmate Backpack Sway
+    const backpackOffset = Math.sin(frame * 0.1) * 3;
+    const backpackShadow = Math.sin(frame * 0.1) * 1.5;
+
+    // We can simulate the pack with rounds and gradients (more efficient than full sprite slice)
+    const

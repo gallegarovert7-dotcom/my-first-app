@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | Bisaya Tongue Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap');
+        :root { --bg: #040a14; --cyan: #00d4ff; --text: #e2eeff; }
+        body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); }
+        .glass { background: rgba(10,20,40,0.85); border: 1px solid rgba(0,180,220,0.15); backdrop-filter: blur(20px); }
+        input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); outline: none; transition: 0.2s; }
+        input:focus { border-color: var(--cyan); background: rgba(0,212,255,0.06); }
+        .role-tab.active { background: #0099cc; color: #fff; box-shadow: 0 0 20px rgba(0,150,200,0.4); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="glass w-[440px] p-12 rounded-[2rem] shadow-2xl animate-in fade-in zoom-in duration-500">
+        <div class="text-center mb-10">
+            <div class="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-cyan-500/20">🫦</div>
+            <h1 class="text-3xl font-black tracking-tighter">Bisaya Tongue</h1>
+            <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-2">Pro Trainer v2.0</p>
+        </div>
+
+        <div class="flex gap-2 p-1 bg-slate-900/50 rounded-xl mb-8">
+            <button id="tab-student" class="flex-1 py-3 text-xs font-black rounded-lg role-tab active" onclick="switchRole('student')">STUDENT</button>
+            <button id="tab-admin" class="flex-1 py-3 text-xs font-black rounded-lg role-tab" onclick="switchRole('admin')">ADMIN</button>
+        </div>
+
+        <div class="space-y-6">
+            <div id="username-group">
+                <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Username</label>
+                <div class="relative">
+                    <input type="text" id="username" class="w-full p-4 rounded-xl pl-12 text-sm" placeholder="e.g. juan_dela_cruz">
+                    <i class="fas fa-user absolute left-4 top-4 text-slate-600"></i>
+                </div>
+            </div>
+
+            <div>
+                <label id="pass-label" class="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Access Password</label>
+                <div class="relative">
+                    <input type="password" id="password" class="w-full p-4 rounded-xl pl-12 text-sm" placeholder="••••••••">
+                    <i class="fas fa-lock absolute left-4 top-4 text-slate-600"></i>
+                </div>
+            </div>
+
+            <button onclick="handleAuth()" id="submit-btn" class="w-full py-4 bg-cyan-500 rounded-xl text-black font-black hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/30">START TRAINING →</button>
+        </div>
+
+        <div id="footer-toggle" class="mt-8 text-center text-xs text-slate-500">
+            Don't have an account? <a onclick="toggleRegister()" class="text-cyan-500 font-bold cursor-pointer hover:underline">Register here</a>
+        </div>
+    </div>
+
+    <script>
+        let currentRole = 'student';
+        let isRegisterMode = false;
+
+        function switchRole(role) {
+            currentRole = role;
+            document.getElementById('tab-student').classList.toggle('active', role === 'student');
+            document.getElementById('tab-admin').classList.toggle('active', role === 'admin');
+
+            const userGroup = document.getElementById('username-group');
+            const passLabel = document.getElementById('pass-label');
+            const submitBtn = document.getElementById('submit-btn');
+            const footer = document.getElementById('footer-toggle');
+
+            if(role === 'admin') {
+                userGroup.style.display = 'none';
+                passLabel.innerText = "Admin Password";
+                submitBtn.innerText = "OPEN ADMIN PANEL →";
+                footer.style.visibility = 'hidden';
+            } else {
+                userGroup.style.display = 'block';
+                passLabel.innerText = "Access Password";
+                submitBtn.innerText = isRegisterMode ? "CREATE ACCOUNT →" : "START TRAINING →";
+                footer.style.visibility = 'visible';
+            }
+        }
+
+        function toggleRegister() {
+            isRegisterMode = !isRegisterMode;
+            document.getElementById('submit-btn').innerText = isRegisterMode ? "CREATE ACCOUNT →" : "START TRAINING →";
+            document.getElementById('footer-toggle').innerHTML = isRegisterMode ?
+                `Already a student? <a onclick="toggleRegister()" class="text-cyan-500 font-bold cursor-pointer">Sign in</a>` :
+                `Don't have an account? <a onclick="toggleRegister()" class="text-cyan-500 font-bold cursor-pointer">Register here</a>`;
+        }
+
+        async function handleAuth() {
+            const password = document.getElementById('password').value;
+            const username = currentRole === 'admin' ? 'admin' : document.getElementById('username').value;
+            const path = isRegisterMode ? '/auth/register' : '/auth/login';
+
+            const res = await fetch(path, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await res.json();
+            if(data.success) {
+                if(isRegisterMode) { alert("Account created!"); toggleRegister(); }
+                else { window.location.href = '/'; }
+            } else { alert(data.error); }
+        }
+    </script>
+</body>
+</html>
